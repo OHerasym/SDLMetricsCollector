@@ -1,3 +1,4 @@
+#! /usr/bin/env python2
 from jira import JIRA
 from datetime import date, timedelta
 import time
@@ -5,8 +6,8 @@ import getpass
 
 # TODO:
 # Not logged vacation
-#	Open code reviews with age more 2 days 
-#	Absence of "in progress" issues assigned to each team member 
+#	Open code reviews with age more 2 days
+#	Absence of "in progress" issues assigned to each team member
 #	Weekly metrics
 #	Monthly project metrics
 from IPython.lib.editorhooks import emacs
@@ -123,7 +124,7 @@ class SDL():
             issues = self.jira.search_issues(query % (user, self.sprint, self.sprint.startDate, self.sprint.releaseDate))
             for issue in issues:
                 report.append((user, self.issue_path%issue))
-                print("%s has issue %th wrong due date %s" % (user, issue))
+                print("%s has issue with  wrong due date %s" % (user, issue))
         return report
 
 
