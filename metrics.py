@@ -3,6 +3,7 @@ from jira import JIRA
 from datetime import date, timedelta
 import time
 import getpass
+import smtplib
 
 # TODO:
 # Not logged vacation
@@ -16,6 +17,27 @@ server = "http://adc.luxoft.com/jira"
 current_sprint = "SDL_RB_B3.20"
 users = ["DKlimenko", "DTrunov ", "AGaliuzov", "AKutsan", "AOleynik", "ANosach", "OKrotenko", "VVeremjova",
          "AByzhynar", "EZamakhov", "ALeshin", "AKirov", "VProdanov"]
+
+
+message_template = '''From: Alexander Kutsan <AKutsan@luxoft.com>
+To: %s
+Subject: Metric fails WARNING
+
+Hello,
+
+Metric fails collected by script:
+
+%s
+
+You can get script sources :
+git clone ssh_user@akutsan:metrics
+git clone ssh_user@172.30.153.208:metrics
+Password : ssh_user
+
+Best regards,
+Alexander Kutsan
+'''
+
 
 def is_holiday(day):
     return day.weekday() > 4
@@ -138,18 +160,28 @@ class SDL():
                 print("%s has issue with wrong fix version %s" % (user, issue))
         return report
 
+    def old_code_review(self, users):
+        report = []
+        report.append((None, "ERROR: Feature is not implemented yet"))
+        return report
+
+    def prev_day_logging(self, users):
+        report = []
+        report.append((None, "ERROR: Feature is not implemented yet"))
+        return report
 
     def daily_metrics(self, users):
         report = {}
-        report['7. Workload of team members'] = self.calc_overload(users)
         report['1. Issues without due dates (except ongoing activities)'] = self.issues_without_due_date(users)
         report['2. Issues with expired due dates'] = self.issues_with_expired_due_date(users)
         report['4. Tickets "in progress" without updating during last 2 days'] = self.expired_in_progress(users)
         report['5. Open issues without correct estimation'] = self.without_correct_estimation(users)
+        report['6. Open code reviews with age more 2 days'] = self.old_code_review(users)
+        report['9. Previous day work time logging'] = self.prev_day_logging(users)
+        report['7. Workload of team members'] = self.calc_overload(users)
         report['8. Wrong due date'] = self.wrong_due_date(users)
         report['11. Tickets with wrong FixVersion'] = self.wrong_fix_version(users)
         return report
-
 
 def main():
     user = raw_input("Enter JIRA username : ")
@@ -158,16 +190,25 @@ def main():
     daily_report = sdl.daily_metrics(users)
     email_list = []
     email_template = "%s@luxoft.com"
+    report_str = ""
     for metric in daily_report:
-        print("%s :"%metric)
+        temp = "%s : \n"%metric
+        print(temp)
+        report_str += temp
         fails = daily_report[metric]
         for fail in fails:
-            print("\t%s : %s"%(fail[0],fail[1]))
-            email = email_template%(fail[0])
-            if email not in email_list:
-                email_list.append(email)
-    email_list = " ;".join(email_list)
+            temp = "\t%s : %s \n"%(fail[0],fail[1])
+            print(temp)
+            report_str += temp
+            if fail[0]:
+                email = email_template%(fail[0])
+                if email not in email_list:
+                    email_list.append(email)
     print(email_list)
+    sender = '%s@luxoft.com'%user
+    smtpObj = smtplib.SMTP('puppy.luxoft.com')
+    smtpObj.sendmail(sender, email_list, message_template%(";".join(email_list), report_str))
+
     return 0
 if __name__ == "__main__" :
     main()
