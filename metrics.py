@@ -170,16 +170,30 @@ class SDL():
         report.append((None, "ERROR: Feature is not implemented yet"))
         return report
 
+    def absence_in_progress(self, users):
+        report = []
+        for user in users:
+            query = '''assignee = %s AND status = "In Progress" '''
+            issues = self.jira.search_issues(query % user)
+            if (len(issues) == 0):
+                report.append((user, None))
+                print("%s has no issues in Progress" % user)
+        return report
+
+
+
     def daily_metrics(self, users):
         report = {}
         report['1. Issues without due dates (except ongoing activities)'] = self.issues_without_due_date(users)
         report['2. Issues with expired due dates'] = self.issues_with_expired_due_date(users)
+        report['2. Issues with expired due dates'] = self.issues_with_expired_due_date(users)
+        report ['3. Absence of "in progress" issues assigned to each team memberreport'] = self.absence_in_progress(users)
         report['4. Tickets "in progress" without updating during last 2 days'] = self.expired_in_progress(users)
         report['5. Open issues without correct estimation'] = self.without_correct_estimation(users)
         report['6. Open code reviews with age more 2 days'] = self.old_code_review(users)
-        report['9. Previous day work time logging'] = self.prev_day_logging(users)
-        report['7. Workload of team members'] = self.calc_overload(users)
+        report['7. Overload : '] = self.calc_overload(users)
         report['8. Wrong due date'] = self.wrong_due_date(users)
+        report['9. Previous day work time logging'] = self.prev_day_logging(users)
         report['11. Tickets with wrong FixVersion'] = self.wrong_fix_version(users)
         return report
 
