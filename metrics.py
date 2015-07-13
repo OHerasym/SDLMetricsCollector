@@ -4,6 +4,7 @@ from datetime import date, timedelta
 import time
 import getpass
 import smtplib
+import argparse
 
 # TODO:
 # Not logged vacation
@@ -197,7 +198,7 @@ class SDL():
         report['11. Tickets with wrong FixVersion'] = self.wrong_fix_version(users)
         return report
 
-def main():
+def main(send_mails = False):
     user = raw_input("Enter JIRA username : ")
     passwd = getpass.getpass()
     sdl = SDL(user, passwd)
@@ -218,11 +219,16 @@ def main():
                 email = email_template%(fail[0])
                 if email not in email_list:
                     email_list.append(email)
-    print(email_list)
-    sender = '%s@luxoft.com'%user
-    smtpObj = smtplib.SMTP('puppy.luxoft.com')
-    smtpObj.sendmail(sender, email_list, message_template%(";".join(email_list), report_str))
+    if (send_mails):
+        print(email_list)
+        sender = '%s@luxoft.com'%user
+        smtpObj = smtplib.SMTP('puppy.luxoft.com')
+        smtpObj.sendmail(sender, email_list, message_template%(";".join(email_list), report_str))
 
     return 0
 if __name__ == "__main__" :
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-l", "--local", action="store_false",
+                        help="Do not sent emails about result")
+    args = parser.parse_args()
+    main(args.local)
