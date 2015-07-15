@@ -1,6 +1,8 @@
 #! /usr/bin/env python2
 from jira import JIRA
-from datetime import date, timedelta
+from datetime import  date, timedelta
+import dateutil.parser
+
 import time
 import getpass
 import smtplib
@@ -18,7 +20,6 @@ server = "http://adc.luxoft.com/jira"
 current_sprint = "SDL_RB_B3.20"
 users = ["DKlimenko", "DTrunov ", "AGaliuzov", "AKutsan", "AOleynik", "ANosach", "OKrotenko", "VVeremjova",
          "AByzhynar", "EZamakhov", "ALeshin", "AKirov", "VProdanov"]
-
 
 message_template = '''From: Alexander Kutsan <AKutsan@luxoft.com>
 To: %s
@@ -59,8 +60,10 @@ def to_h(val):
 
 class SDL():
     issue_path = "https://adc.luxoft.com/jira/browse/%s"
-    def __init__(self, user, passwd):
-        self.jira = JIRA(server, basic_auth=("AKutsan", passwd))
+
+    def __init__(self, user, passwd, developers_on_vacation = []):
+        self.jira = JIRA(server, basic_auth=(user, passwd))
+        self.on_vacation = developers_on_vacation
         self.sdl = self.jira.project('APPLINK')
         versions = self.jira.project_versions(self.sdl)
         for v in versions:
@@ -90,9 +93,9 @@ class SDL():
             overload = hours_left - load
             #res = "OK"
             if (overload < 0):
-                res = "OVERLOAD : %s"%(-overload)
+                res = "OVERLOAD : %s" % (-overload)
                 print("%s overload : %s h  (%s/%s)" % (user, -overload, load, hours_left))
-                report_str = "%s/%s : %s"%(load, hours_left, res)
+                report_str = "%s/%s : %s" % (load, hours_left, res)
                 report.append((user, report_str))
         return report
 
@@ -102,7 +105,7 @@ class SDL():
             query = ''' assignee = %s and type not in (Question) AND fixversion in ("%s")  AND status not in (Closed, Resolved, Suspended) AND duedate is EMPTY '''
             issues = self.jira.search_issues(query % (user, self.sprint))
             for issue in issues:
-                report.append((user, self.issue_path%issue))
+                report.append((user, self.issue_path % issue))
                 print("%s has issue without estimate %s" % (user, issue))
         return report
 
@@ -113,7 +116,7 @@ class SDL():
             query = ''' assignee = %s and status not in (closed, resolved, Approved) AND duedate < startOfDay()'''
             issues = self.jira.search_issues(query % user)
             for issue in issues:
-                report.append((user, self.issue_path%issue))
+                report.append((user, self.issue_path % issue))
                 print("%s has issue with expired due date %s" % (user, issue))
         return report
 
@@ -124,7 +127,7 @@ class SDL():
             query = ''' assignee = %s AND status = "In Progress" AND (updated < -2d OR fixVersion = Backlog)'''
             issues = self.jira.search_issues(query % user)
             for issue in issues:
-                report.append((user, self.issue_path%issue))
+                report.append((user, self.issue_path % issue))
                 print("%s has issue in Progress that wasn't updated more then 2 days %s" % (user, issue))
         return report
 
@@ -135,7 +138,7 @@ class SDL():
             query = ''' assignee = %s and type not in (Question) AND fixversion in ("%s") AND status not in (Closed, Resolved, Suspended) AND (remainingEstimate = 0 OR remainingEstimate is EMPTY)'''
             issues = self.jira.search_issues(query % (user, self.sprint))
             for issue in issues:
-                report.append((user, self.issue_path%issue))
+                report.append((user, self.issue_path % issue))
                 print("%s has issue without correct estimation %s" % (user, issue))
         return report
 
@@ -144,9 +147,10 @@ class SDL():
         report = []
         for user in users:
             query = ''' assignee = %s and type not in (Question) AND fixversion in ("%s") AND (duedate < "%s" OR duedate > "%s") AND status not in (resolved, closed)'''
-            issues = self.jira.search_issues(query % (user, self.sprint, self.sprint.startDate, self.sprint.releaseDate))
+            issues = self.jira.search_issues(
+                query % (user, self.sprint, self.sprint.startDate, self.sprint.releaseDate))
             for issue in issues:
-                report.append((user, self.issue_path%issue))
+                report.append((user, self.issue_path % issue))
                 print("%s has issue with  wrong due date %s" % (user, issue))
         return report
 
@@ -155,20 +159,11 @@ class SDL():
         report = []
         for user in users:
             query = '''assignee = %s AND fixversion not in ("%s") and (labels is EMPTY OR labels != exclude_from_metrics) AND status not in (closed, resolved) AND duedate > "%s" AND duedate <= "%s" '''
-            issues = self.jira.search_issues(query % (user, self.sprint, self.sprint.startDate, self.sprint.releaseDate))
+            issues = self.jira.search_issues(
+                query % (user, self.sprint, self.sprint.startDate, self.sprint.releaseDate))
             for issue in issues:
-                report.append((user, self.issue_path%issue))
+                report.append((user, self.issue_path % issue))
                 print("%s has issue with wrong fix version %s" % (user, issue))
-        return report
-
-    def old_code_review(self, users):
-        report = []
-        report.append((None, "ERROR: Feature is not implemented yet"))
-        return report
-
-    def prev_day_logging(self, users):
-        report = []
-        report.append((None, "ERROR: Feature is not implemented yet"))
         return report
 
     def absence_in_progress(self, users):
@@ -181,6 +176,32 @@ class SDL():
                 print("%s has no issues in Progress" % user)
         return report
 
+    def not_implemented_yet(self):
+        report = []
+        report.append((None, "ERROR:  Feature is not implemented yet"))
+        return report
+
+    def not_logged_vacation(self):
+        report = []
+        vacation_issue_key = "APPLINK-13266"
+        work_logs = self.jira.worklogs(vacation_issue_key)
+        yesterday_work_logs = []
+        yesterday = date.today() - timedelta(1)
+        print(len(work_logs))
+        i = 1
+        for work_log in  work_logs:
+            date_started = dateutil.parser.parse(work_log.started).date
+            i+=1
+            if yesterday == date_started:
+                yesterday_work_logs.append(date_started)
+        for user in self.on_vacation:
+            logged = False
+            for work_log in yesterday_work_logs:
+                if worklog.author.name == user:
+                    logged = True
+            if not logged:
+                report.append((user, " Not logged vacation for "+yesterday.strftime('%Y-%m-%d')))
+        return report
 
 
     def daily_metrics(self, users):
@@ -188,47 +209,56 @@ class SDL():
         report['1. Issues without due dates (except ongoing activities)'] = self.issues_without_due_date(users)
         report['2. Issues with expired due dates'] = self.issues_with_expired_due_date(users)
         report['2. Issues with expired due dates'] = self.issues_with_expired_due_date(users)
-        report ['3. Absence of "in progress" issues assigned to each team memberreport'] = self.absence_in_progress(users)
+        report['3. Absence of "in progress" issues assigned to each team member report'] = self.absence_in_progress(
+            users)
         report['4. Tickets "in progress" without updating during last 2 days'] = self.expired_in_progress(users)
         report['5. Open issues without correct estimation'] = self.without_correct_estimation(users)
-        report['6. Open code reviews with age more 2 days'] = self.old_code_review(users)
+        report['6. Open code reviews with age more 2 days'] = self.not_implemented_yet()
         report['7. Overload : '] = self.calc_overload(users)
         report['8. Wrong due date'] = self.wrong_due_date(users)
-        report['9. Previous day work time logging'] = self.prev_day_logging(users)
+        report['9. Previous day work time logging'] = self.not_implemented_yet()
+        report['10. Not logged vacation'] = self.not_implemented_yet()
         report['11. Tickets with wrong FixVersion'] = self.wrong_fix_version(users)
+        report['12. Not logged vacation'] = self.not_logged_vacation()
         return report
 
-def main(send_mails = False):
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-m", "--send_mail", action="store_true",
+                        help="Do not sent emails about result")
+    parser.add_argument("-v", "--vacation", action="store", nargs='+',
+                        help="Developer on vacation")
+    args = parser.parse_args()
     user = raw_input("Enter JIRA username : ")
     passwd = getpass.getpass()
-    sdl = SDL(user, passwd)
+    sdl = SDL(user, passwd, developers_on_vacation = args.vacation)
     daily_report = sdl.daily_metrics(users)
     email_list = []
     email_template = "%s@luxoft.com"
     report_str = ""
     for metric in daily_report:
-        temp = "%s : \n"%metric
+        temp = "%s : \n" % metric
         print(temp)
         report_str += temp
         fails = daily_report[metric]
         for fail in fails:
-            temp = "\t%s : %s \n"%(fail[0],fail[1])
+            temp = "\t%s : %s \n" % (fail[0], fail[1])
             print(temp)
             report_str += temp
             if fail[0]:
-                email = email_template%(fail[0])
+                email = email_template % (fail[0])
                 if email not in email_list:
                     email_list.append(email)
-    if (send_mails):
+    if (args.send_mail):
         print(email_list)
-        sender = '%s@luxoft.com'%user
+        sender = '%s@luxoft.com' % user
         smtpObj = smtplib.SMTP('puppy.luxoft.com')
-        smtpObj.sendmail(sender, email_list, message_template%(";".join(email_list), report_str))
+        smtpObj.sendmail(sender, email_list, message_template % (";".join(email_list), report_str))
 
     return 0
-if __name__ == "__main__" :
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-l", "--local", action="store_false",
-                        help="Do not sent emails about result")
-    args = parser.parse_args()
-    main(args.local)
+
+
+if __name__ == "__main__":
+    main()
