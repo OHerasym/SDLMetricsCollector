@@ -169,6 +169,8 @@ class SDL():
     def absence_in_progress(self, users):
         report = []
         for user in users:
+            if user in self.on_vacation:
+                continue
             query = '''assignee = %s AND status = "In Progress" '''
             issues = self.jira.search_issues(query % user)
             if (len(issues) == 0):
