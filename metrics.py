@@ -7,6 +7,7 @@ import time
 import getpass
 import smtplib
 import argparse
+import re
 
 # TODO:
 # Not logged vacation
@@ -18,8 +19,8 @@ from IPython.lib.editorhooks import emacs
 
 server = "http://adc.luxoft.com/jira"
 current_sprint = "SDL_RB_B3.20"
-users = ["DKlimenko", "DTrunov ", "AGaliuzov", "AKutsan", "AOleynik", "ANosach", "OKrotenko", "VVeremjova",
-         "AByzhynar", "EZamakhov", "ALeshin", "AKirov", "VProdanov"]
+users = ["dtrunov ", "agaliuzov", "akutsan", "aoleynik", "anosach", "okrotenko", "vveremjova",
+         "abyzhynar", "ezamakhov", "aleshin", "akirov", "vprodanov"]
 
 message_template = '''From: Alexander Kutsan <AKutsan@luxoft.com>
 To: %s
@@ -44,6 +45,18 @@ Alexander Kutsan
 def is_holiday(day):
     return day.weekday() > 4
 
+def time_spent_from_str(time_spent):
+    res = 0
+    minutes = re.search("([0-9]+)m", time_spent)
+    hours = re.search("([0-9]+)h", time_spent)
+    days = re.search("([0-9]+)d", time_spent)
+    if (days):
+        res += int(days.groups()[0])*8.0
+    if (hours):
+        res += int(hours.groups()[0])
+    if (minutes):
+        res += int(minutes.groups()[0])/60.0
+    return res
 
 def calc_diff_days(from_date, to_date):
     from_date = from_date.split("-")
@@ -52,6 +65,12 @@ def calc_diff_days(from_date, to_date):
     to_date = date(int(to_date[0]), int(to_date[1]), int(to_date[2]))
     day_generator = (from_date + timedelta(x + 1) for x in range((to_date - from_date).days))
     return sum(1 for day in day_generator if not is_holiday(day))
+
+def last_work_day():
+    day = date.today() - timedelta(1)
+    while is_holiday(day):
+        day -= timedelta(1)
+    return day
 
 
 def to_h(val):
@@ -190,7 +209,6 @@ class SDL():
         work_logs = self.jira.worklogs(vacation_issue_key)
         yesterday_work_logs = []
         yesterday = date.today() - timedelta(1)
-        print(len(work_logs))
         for work_log in  work_logs:
             date_started = dateutil.parser.parse(work_log.started).date
             if yesterday == date_started:
@@ -204,19 +222,41 @@ class SDL():
                 report.append((user, " Not logged vacation for "+yesterday.strftime('%Y-%m-%d')))
         return report
 
+    def not_logged_work(self):
+        report = []
+        user_logged = {}
+        for developer in self.developers:
+            user_logged[developer] = 0
+        today = date.today()
+        last_work = last_work_day()
+        query = '''key in workedIssues("%s","%s", "APPLINK Developers")'''%(last_work.strftime("%Y/%m/%d"),
+                                                                            today.strftime("%Y/%m/%d"))
+        issues = self.jira.search_issues(query)
+        for issue in issues:
+            work_logs = self.jira.worklogs(issue.key)
+            for work_log in work_logs:
+                date_started = dateutil.parser.parse(work_log.started).date()
+                if date_started == last_work:
+                    time_spent = work_log.timeSpent
+                    author = work_log.updateAuthor.name
+                    if author in self.developers:
+                        user_logged[author] += time_spent_from_str(time_spent)
+        for developer in user_logged:
+            if (user_logged[developer] < 8):
+                report.append((developer, "Logged for %s : %sh"%(last_work.strftime("%Y/%m/%d"),user_logged[developer])))
+        return report
 
     def daily_metrics(self):
         report = {}
         report['1. Tickets with incorrect or empty due date (except ongoing activities)'] = self.issues_without_due_date()
         report['2. Tickets with expired due dates'] = self.issues_with_expired_due_date()
         report['2. Issues with expired due dates'] = self.issues_with_expired_due_date()
-        report['3. Absence of "in progress" issues assigned to each team member report'] = self.absence_in_progress(
-            )
+        report['3. Absence of "in progress" issues assigned to each team member report'] = self.absence_in_progress()
         report['4. Tickets "in progress" without updating during last 2 days'] = self.expired_in_progress()
         report['5. Open issues without correct estimation'] = self.without_correct_estimation()
         report['6. Open code reviews with age more 2 days'] = self.not_implemented_yet()
         report['7. Overload : '] = self.calc_overload()
-        report['8. Previous day work time logging'] = self.not_implemented_yet()
+        report['8. Previous day work time logging'] = self.not_logged_work()
         report['9. Not logged vacation'] = self.not_logged_vacation()
         report['10. Tickets with wrong FixVersion'] = self.wrong_fix_version()
         report['11. Wrong due date'] = self.wrong_due_date()
@@ -247,12 +287,10 @@ def main():
     report_str = ""
     for metric in daily_report:
         temp = "%s : \n" % metric
-        print(temp)
         report_str += temp
         fails = daily_report[metric]
         for fail in fails:
             temp = "\t%s : %s \n" % (fail[0], fail[1])
-            print(temp)
             report_str += temp
             if fail[0]:
                 email = email_template % (fail[0])
