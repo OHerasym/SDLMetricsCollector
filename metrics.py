@@ -208,8 +208,8 @@ class SDL():
 
     def daily_metrics(self):
         report = {}
-        report['1. Issues without due dates (except ongoing activities)'] = self.issues_without_due_date()
-        report['2. Issues with expired due dates'] = self.issues_with_expired_due_date()
+        report['1. Tickets with incorrect or empty due date (except ongoing activities)'] = self.issues_without_due_date()
+        report['2. Tickets with expired due dates'] = self.issues_with_expired_due_date()
         report['2. Issues with expired due dates'] = self.issues_with_expired_due_date()
         report['3. Absence of "in progress" issues assigned to each team member report'] = self.absence_in_progress(
             )
@@ -217,16 +217,14 @@ class SDL():
         report['5. Open issues without correct estimation'] = self.without_correct_estimation()
         report['6. Open code reviews with age more 2 days'] = self.not_implemented_yet()
         report['7. Overload : '] = self.calc_overload()
-        report['8. Wrong due date'] = self.wrong_due_date()
-        report['9. Previous day work time logging'] = self.not_implemented_yet()
-        report['10. Not logged vacation'] = self.not_implemented_yet()
-        report['11. Tickets with wrong FixVersion'] = self.wrong_fix_version()
-        report['12. Not logged vacation'] = self.not_logged_vacation()
+        report['8. Previous day work time logging'] = self.not_implemented_yet()
+        report['9. Not logged vacation'] = self.not_logged_vacation()
+        report['10. Tickets with wrong FixVersion'] = self.wrong_fix_version()
+        report['11. Wrong due date'] = self.wrong_due_date()
         return report
 
 
 def main():
-    parser = argparse.ArgumentParser()
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--send_mail", action="store_true",
                         help="Do not sent emails about result")
