@@ -193,7 +193,6 @@ class SDL():
         print(len(work_logs))
         for work_log in  work_logs:
             date_started = dateutil.parser.parse(work_log.started).date
-            i+=1
             if yesterday == date_started:
                 yesterday_work_logs.append(date_started)
         for user in self.on_vacation:
