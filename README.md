@@ -9,7 +9,7 @@ Can send email to developers, that have fails in metrics. (use -m option for thi
 
 For help use :
 ./metrics.py -h
-
+[code]
 usage: metrics.py [-h] [-m] [-v VACATION [VACATION ...]]
                   [-d DEVELOPERS [DEVELOPERS ...]]
 
@@ -20,3 +20,4 @@ optional arguments:
                         Developer on vacation
   -d DEVELOPERS [DEVELOPERS ...], --developers DEVELOPERS [DEVELOPERS ...]
                         Custom developers list
+[/code]
