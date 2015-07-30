@@ -1,8 +1,7 @@
 #! /usr/bin/env python2
 from jira import JIRA
-from datetime import  date, timedelta
+from datetime import date, timedelta
 import dateutil.parser
-
 import time
 import getpass
 import smtplib
@@ -10,12 +9,9 @@ import argparse
 import re
 
 # TODO:
-# Not logged vacation
 #	Open code reviews with age more 2 days
-#	Absence of "in progress" issues assigned to each team member
 #	Weekly metrics
 #	Monthly project metrics
-from IPython.lib.editorhooks import emacs
 
 server = "http://adc.luxoft.com/jira"
 current_sprint = "SDL_RB_B3.20"
@@ -32,10 +28,8 @@ Metric fails collected by script:
 
 %s
 
-You can get script sources :
-git clone ssh_user@akutsan:metrics
-git clone ssh_user@172.30.153.208:metrics
-Password : ssh_user
+Script sources available on github
+https://github.com/LuxoftAKutsan/SDLMetricsCollector
 
 Best regards,
 Alexander Kutsan
@@ -45,18 +39,20 @@ Alexander Kutsan
 def is_holiday(day):
     return day.weekday() > 4
 
+
 def time_spent_from_str(time_spent):
     res = 0
     minutes = re.search("([0-9]+)m", time_spent)
     hours = re.search("([0-9]+)h", time_spent)
     days = re.search("([0-9]+)d", time_spent)
-    if (days):
-        res += int(days.groups()[0])*8.0
-    if (hours):
+    if days:
+        res += int(days.groups()[0]) * 8.0
+    if hours:
         res += int(hours.groups()[0])
-    if (minutes):
-        res += int(minutes.groups()[0])/60.0
+    if minutes:
+        res += int(minutes.groups()[0]) / 60.0
     return res
+
 
 def calc_diff_days(from_date, to_date):
     from_date = from_date.split("-")
@@ -65,6 +61,7 @@ def calc_diff_days(from_date, to_date):
     to_date = date(int(to_date[0]), int(to_date[1]), int(to_date[2]))
     day_generator = (from_date + timedelta(x + 1) for x in range((to_date - from_date).days))
     return sum(1 for day in day_generator if not is_holiday(day))
+
 
 def last_work_day():
     day = date.today() - timedelta(1)
@@ -80,7 +77,7 @@ def to_h(val):
 class SDL():
     issue_path = "https://adc.luxoft.com/jira/browse/%s"
 
-    def __init__(self, user, passwd, developers_on_vacation = [], developers = users):
+    def __init__(self, user, passwd, developers_on_vacation=[], developers=users):
         self.jira = JIRA(server, basic_auth=(user, passwd))
         self.on_vacation = developers_on_vacation
         self.developers = developers
@@ -209,7 +206,7 @@ class SDL():
         work_logs = self.jira.worklogs(vacation_issue_key)
         yesterday_work_logs = []
         yesterday = date.today() - timedelta(1)
-        for work_log in  work_logs:
+        for work_log in work_logs:
             date_started = dateutil.parser.parse(work_log.started).date
             if yesterday == date_started:
                 yesterday_work_logs.append(date_started)
@@ -219,7 +216,7 @@ class SDL():
                 if worklog.author.name == user:
                     logged = True
             if not logged:
-                report.append((user, " Not logged vacation for "+yesterday.strftime('%Y-%m-%d')))
+                report.append((user, " Not logged vacation for " + yesterday.strftime('%Y-%m-%d')))
         return report
 
     def not_logged_work(self):
@@ -229,8 +226,8 @@ class SDL():
             user_logged[developer] = 0
         today = date.today()
         last_work = last_work_day()
-        query = '''key in workedIssues("%s","%s", "APPLINK Developers")'''%(last_work.strftime("%Y/%m/%d"),
-                                                                            today.strftime("%Y/%m/%d"))
+        query = '''key in workedIssues("%s","%s", "APPLINK Developers")''' % (last_work.strftime("%Y/%m/%d"),
+                                                                              today.strftime("%Y/%m/%d"))
         issues = self.jira.search_issues(query)
         for issue in issues:
             work_logs = self.jira.worklogs(issue.key)
@@ -243,12 +240,14 @@ class SDL():
                         user_logged[author] += time_spent_from_str(time_spent)
         for developer in user_logged:
             if (user_logged[developer] < 8):
-                report.append((developer, "Logged for %s : %sh"%(last_work.strftime("%Y/%m/%d"),user_logged[developer])))
+                report.append(
+                    (developer, "Logged for %s : %sh" % (last_work.strftime("%Y/%m/%d"), user_logged[developer])))
         return report
 
     def daily_metrics(self):
         report = {}
-        report['1. Tickets with incorrect or empty due date (except ongoing activities)'] = self.issues_without_due_date()
+        report[
+            '1. Tickets with incorrect or empty due date (except ongoing activities)'] = self.issues_without_due_date()
         report['2. Tickets with expired due dates'] = self.issues_with_expired_due_date()
         report['3. Absence of "in progress" issues assigned to each team member report'] = self.absence_in_progress()
         report['4. Tickets "in progress" without updating during last 2 days'] = self.expired_in_progress()
@@ -265,7 +264,7 @@ class SDL():
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--send_mail", action="store_true",
-                        help="Do not sent emails about result")
+                        help="Send emails about result")
     parser.add_argument("-v", "--vacation", action="store", nargs='+',
                         help="Developer on vacation")
     parser.add_argument("-d", "--developers", action="store", nargs='+',
@@ -279,7 +278,7 @@ def main():
     on_vacation = []
     if args.vacation:
         on_vacation = args.vacation
-    sdl = SDL(user, passwd, developers_on_vacation = on_vacation, developers = developers)
+    sdl = SDL(user, passwd, developers_on_vacation=on_vacation, developers=developers)
     daily_report = sdl.daily_metrics()
     email_list = []
     email_template = "%s@luxoft.com"
