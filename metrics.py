@@ -250,7 +250,6 @@ class SDL():
         report = {}
         report['1. Tickets with incorrect or empty due date (except ongoing activities)'] = self.issues_without_due_date()
         report['2. Tickets with expired due dates'] = self.issues_with_expired_due_date()
-        report['2. Issues with expired due dates'] = self.issues_with_expired_due_date()
         report['3. Absence of "in progress" issues assigned to each team member report'] = self.absence_in_progress()
         report['4. Tickets "in progress" without updating during last 2 days'] = self.expired_in_progress()
         report['5. Open issues without correct estimation'] = self.without_correct_estimation()
@@ -296,6 +295,7 @@ def main():
                 email = email_template % (fail[0])
                 if email not in email_list:
                     email_list.append(email)
+    print(report_str)
     if (args.send_mail):
         print(email_list)
         sender = '%s@luxoft.com' % user
