@@ -16,7 +16,7 @@ import re
 server = "http://adc.luxoft.com/jira"
 current_sprint = "SDL_RB_B3.20"
 users = ["dtrunov ", "agaliuzov", "akutsan", "aoleynik", "anosach", "okrotenko", "vveremjova",
-         "abyzhynar", "ezamakhov", "aleshin", "akirov", "vprodanov"]
+         "abyzhynar", "ezamakhov", "aleshin", "akirov", "vprodanov", "alambin"]
 
 message_template = '''From: Alexander Kutsan <AKutsan@luxoft.com>
 To: %s
