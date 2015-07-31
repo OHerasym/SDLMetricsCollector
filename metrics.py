@@ -14,7 +14,7 @@ import re
 #	Monthly project metrics
 
 server = "http://adc.luxoft.com/jira"
-current_sprint = "SDL_RB_B3.20"
+current_sprint = "SDL_RB_B3.21"
 users = ["dtrunov ", "agaliuzov", "akutsan", "aoleynik", "anosach", "okrotenko", "vveremjova",
          "abyzhynar", "ezamakhov", "aleshin", "akirov", "vprodanov", "alambin"]
 
@@ -77,27 +77,34 @@ def to_h(val):
 class SDL():
     issue_path = "https://adc.luxoft.com/jira/browse/%s"
 
-    def __init__(self, user, passwd, developers_on_vacation=[], developers=users):
+    def __init__(self, user, passwd, developers_on_vacation=[],
+                 developers=users, print_queries = False):
         self.jira = JIRA(server, basic_auth=(user, passwd))
         self.on_vacation = developers_on_vacation
         self.developers = developers
         self.sdl = self.jira.project('APPLINK')
         versions = self.jira.project_versions(self.sdl)
+        self.print_queries = print_queries
         for v in versions:
             if v.name == current_sprint:
                 self.sprint = v
                 break
 
+    def Query(self, query):
+        if (self.print_queries):
+            print(query)
+        issues = self.jira.search_issues(query)
+        return issues
+
     def workload(self, user, report=[]):
         query = 'assignee = %s AND status not in (Suspended, Closed, Resolved) AND fixVersion in("%s")'
-        issues = self.jira.search_issues(query % (user, self.sprint))
+        query = query%(user, self.sprint)
+        issues = self.Query(query)
         res = 0
         for issue in issues:
             if issue.fields.timeestimate:
                 res += to_h(issue.fields.timeestimate)
                 report.append((issue, to_h(issue.fields.timeestimate)))
-            else:
-                print("Not estimated issue %s (%s)" % (issue, user))
         return res
 
     def calc_overload(self):
@@ -109,9 +116,9 @@ class SDL():
             hours_left = days_left * 8
             overload = hours_left - load
             #res = "OK"
+            print("%s workload : %s/%s" % (user, load, hours_left))
             if (overload < 0):
                 res = "OVERLOAD : %s" % (-overload)
-                print("%s overload : %s h  (%s/%s)" % (user, -overload, load, hours_left))
                 report_str = "%s/%s : %s" % (load, hours_left, res)
                 report.append((user, report_str))
         return report
@@ -120,10 +127,10 @@ class SDL():
         report = []
         for user in self.developers:
             query = ''' assignee = %s and type not in (Question) AND fixversion in ("%s")  AND status not in (Closed, Resolved, Suspended) AND duedate is EMPTY '''
-            issues = self.jira.search_issues(query % (user, self.sprint))
+            query = query%(user, self.sprint)
+            issues = self.Query(query)
             for issue in issues:
                 report.append((user, self.issue_path % issue))
-                print("%s has issue without estimate %s" % (user, issue))
         return report
 
 
@@ -131,10 +138,10 @@ class SDL():
         report = []
         for user in self.developers:
             query = ''' assignee = %s and status not in (closed, resolved, Approved) AND duedate < startOfDay()'''
-            issues = self.jira.search_issues(query % user)
+            query = query%(user)
+            issues = self.Query(query)
             for issue in issues:
                 report.append((user, self.issue_path % issue))
-                print("%s has issue with expired due date %s" % (user, issue))
         return report
 
 
@@ -142,10 +149,10 @@ class SDL():
         report = []
         for user in self.developers:
             query = ''' assignee = %s AND status = "In Progress" AND (updated < -2d OR fixVersion = Backlog)'''
-            issues = self.jira.search_issues(query % user)
+            query = query%(user)
+            issues = self.Query(query)
             for issue in issues:
                 report.append((user, self.issue_path % issue))
-                print("%s has issue in Progress that wasn't updated more then 2 days %s" % (user, issue))
         return report
 
 
@@ -153,10 +160,10 @@ class SDL():
         report = []
         for user in self.developers:
             query = ''' assignee = %s and type not in (Question) AND fixversion in ("%s") AND status not in (Closed, Resolved, Suspended) AND (remainingEstimate = 0 OR remainingEstimate is EMPTY)'''
-            issues = self.jira.search_issues(query % (user, self.sprint))
+            query = query%(user, self.sprint)
+            issues = self.Query(query)
             for issue in issues:
                 report.append((user, self.issue_path % issue))
-                print("%s has issue without correct estimation %s" % (user, issue))
         return report
 
 
@@ -164,11 +171,10 @@ class SDL():
         report = []
         for user in self.developers:
             query = ''' assignee = %s and type not in (Question) AND fixversion in ("%s") AND (duedate < "%s" OR duedate > "%s") AND status not in (resolved, closed)'''
-            issues = self.jira.search_issues(
-                query % (user, self.sprint, self.sprint.startDate, self.sprint.releaseDate))
+            query = query%(user, self.sprint, self.sprint.startDate, self.sprint.releaseDate)
+            issues = self.Query(query)
             for issue in issues:
                 report.append((user, self.issue_path % issue))
-                print("%s has issue with  wrong due date %s" % (user, issue))
         return report
 
 
@@ -176,11 +182,10 @@ class SDL():
         report = []
         for user in self.developers:
             query = '''assignee = %s AND fixversion not in ("%s") and (labels is EMPTY OR labels != exclude_from_metrics) AND status not in (closed, resolved) AND duedate > "%s" AND duedate <= "%s" '''
-            issues = self.jira.search_issues(
-                query % (user, self.sprint, self.sprint.startDate, self.sprint.releaseDate))
+            query = query%(user, self.sprint, self.sprint.startDate, self.sprint.releaseDate)
+            issues = self.Query(query)
             for issue in issues:
                 report.append((user, self.issue_path % issue))
-                print("%s has issue with wrong fix version %s" % (user, issue))
         return report
 
     def absence_in_progress(self):
@@ -189,10 +194,9 @@ class SDL():
             if user in self.on_vacation:
                 continue
             query = '''assignee = %s AND status = "In Progress" '''
-            issues = self.jira.search_issues(query % user)
+            issues = self.Query(query % user)
             if (len(issues) == 0):
                 report.append((user, None))
-                print("%s has no issues in Progress" % user)
         return report
 
     def not_implemented_yet(self):
@@ -228,7 +232,7 @@ class SDL():
         last_work = last_work_day()
         query = '''key in workedIssues("%s","%s", "APPLINK Developers")''' % (last_work.strftime("%Y/%m/%d"),
                                                                               today.strftime("%Y/%m/%d"))
-        issues = self.jira.search_issues(query)
+        issues = self.Query(query)
         for issue in issues:
             work_logs = self.jira.worklogs(issue.key)
             for work_log in work_logs:
@@ -246,8 +250,7 @@ class SDL():
 
     def daily_metrics(self):
         report = {}
-        report[
-            '1. Tickets with incorrect or empty due date (except ongoing activities)'] = self.issues_without_due_date()
+        report['1. Tickets with incorrect or empty due date (except ongoing activities)'] = self.issues_without_due_date()
         report['2. Tickets with expired due dates'] = self.issues_with_expired_due_date()
         report['3. Absence of "in progress" issues assigned to each team member report'] = self.absence_in_progress()
         report['4. Tickets "in progress" without updating during last 2 days'] = self.expired_in_progress()
@@ -269,6 +272,8 @@ def main():
                         help="Developer on vacation")
     parser.add_argument("-d", "--developers", action="store", nargs='+',
                         help="Custom developers list")
+    parser.add_argument("-V", "--verbose", action="store_true",
+                        help="Print queries")
     args = parser.parse_args()
     user = raw_input("Enter JIRA username : ")
     passwd = getpass.getpass()
@@ -278,7 +283,8 @@ def main():
     on_vacation = []
     if args.vacation:
         on_vacation = args.vacation
-    sdl = SDL(user, passwd, developers_on_vacation=on_vacation, developers=developers)
+    sdl = SDL(user, passwd, developers_on_vacation=on_vacation, developers=developers,
+              print_queries=args.verbose)
     daily_report = sdl.daily_metrics()
     email_list = []
     email_template = "%s@luxoft.com"
