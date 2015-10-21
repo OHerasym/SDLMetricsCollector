@@ -14,7 +14,7 @@ import re
 #	Monthly project metrics
 
 server = "http://adc.luxoft.com/jira"
-current_sprint = "SDL_RB_B3.21"
+current_sprint = "SDL_RB_B3.24"
 users = ["dtrunov ", "agaliuzov", "akutsan", "aoleynik", "anosach", "okrotenko", "vveremjova",
          "abyzhynar", "ezamakhov", "aleshin", "akirov", "vprodanov", "alambin"]
 
