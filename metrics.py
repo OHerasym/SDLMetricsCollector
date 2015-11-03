@@ -8,8 +8,10 @@ import smtplib
 import argparse
 import re
 
+import github
+
 # TODO:
-#	Open code reviews with age more 2 days
+# Open code reviews with age more 2 days
 #	Weekly metrics
 #	Monthly project metrics
 
@@ -77,14 +79,15 @@ def to_h(val):
 class SDL():
     issue_path = "https://adc.luxoft.com/jira/browse/%s"
 
-    def __init__(self, user, passwd, developers_on_vacation=[],
-                 developers=users, print_queries = False):
+    def __init__(self, user, passwd, sprint, developers_on_vacation=[],
+                 developers=users, print_queries=False):
         self.jira = JIRA(server, basic_auth=(user, passwd))
         self.on_vacation = developers_on_vacation
         self.developers = developers
         self.sdl = self.jira.project('APPLINK')
-        versions = self.jira.project_versions(self.sdl)
+        self.sprint = sprint
         self.print_queries = print_queries
+        versions = self.jira.project_versions(self.sdl)
         for v in versions:
             if v.name == current_sprint:
                 self.sprint = v
@@ -98,7 +101,7 @@ class SDL():
 
     def workload(self, user, report=[]):
         query = 'assignee = %s AND status not in (Suspended, Closed, Resolved) AND fixVersion in("%s")'
-        query = query%(user, self.sprint)
+        query = query % (user, self.sprint)
         issues = self.Query(query)
         res = 0
         for issue in issues:
@@ -127,7 +130,7 @@ class SDL():
         report = []
         for user in self.developers:
             query = ''' assignee = %s and type not in (Question) AND fixversion in ("%s")  AND status not in (Closed, Resolved, Suspended) AND duedate is EMPTY '''
-            query = query%(user, self.sprint)
+            query = query % (user, self.sprint)
             issues = self.Query(query)
             for issue in issues:
                 report.append((user, self.issue_path % issue))
@@ -138,7 +141,7 @@ class SDL():
         report = []
         for user in self.developers:
             query = ''' assignee = %s and status not in (closed, resolved, Approved) AND duedate < startOfDay()'''
-            query = query%(user)
+            query = query % (user)
             issues = self.Query(query)
             for issue in issues:
                 report.append((user, self.issue_path % issue))
@@ -149,7 +152,7 @@ class SDL():
         report = []
         for user in self.developers:
             query = ''' assignee = %s AND status = "In Progress" AND (updated < -2d OR fixVersion = Backlog)'''
-            query = query%(user)
+            query = query % (user)
             issues = self.Query(query)
             for issue in issues:
                 report.append((user, self.issue_path % issue))
@@ -160,18 +163,25 @@ class SDL():
         report = []
         for user in self.developers:
             query = ''' assignee = %s and type not in (Question) AND fixversion in ("%s") AND status not in (Closed, Resolved, Suspended) AND (remainingEstimate = 0 OR remainingEstimate is EMPTY)'''
-            query = query%(user, self.sprint)
+            query = query % (user, self.sprint)
             issues = self.Query(query)
             for issue in issues:
                 report.append((user, self.issue_path % issue))
         return report
 
+    def expired_code_review(self):
+        report = []
+        gh = github.login()
+        repo = gh.repository('CustomSDL', 'sdl_panasonic')
+        print(github.open_pull_request_for_repo(repo))
+
+        return report
 
     def wrong_due_date(self):
         report = []
         for user in self.developers:
             query = ''' assignee = %s and type not in (Question) AND fixversion in ("%s") AND (duedate < "%s" OR duedate > "%s") AND status not in (resolved, closed)'''
-            query = query%(user, self.sprint, self.sprint.startDate, self.sprint.releaseDate)
+            query = query % (user, self.sprint, self.sprint.startDate, self.sprint.releaseDate)
             issues = self.Query(query)
             for issue in issues:
                 report.append((user, self.issue_path % issue))
@@ -182,7 +192,7 @@ class SDL():
         report = []
         for user in self.developers:
             query = '''assignee = %s AND fixversion not in ("%s") and (labels is EMPTY OR labels != exclude_from_metrics) AND status not in (closed, resolved) AND duedate > "%s" AND duedate <= "%s" '''
-            query = query%(user, self.sprint, self.sprint.startDate, self.sprint.releaseDate)
+            query = query % (user, self.sprint, self.sprint.startDate, self.sprint.releaseDate)
             issues = self.Query(query)
             for issue in issues:
                 report.append((user, self.issue_path % issue))
@@ -250,17 +260,18 @@ class SDL():
 
     def daily_metrics(self):
         report = {}
-        report['1. Tickets with incorrect or empty due date (except ongoing activities)'] = self.issues_without_due_date()
-        report['2. Tickets with expired due dates'] = self.issues_with_expired_due_date()
-        report['3. Absence of "in progress" issues assigned to each team member report'] = self.absence_in_progress()
-        report['4. Tickets "in progress" without updating during last 2 days'] = self.expired_in_progress()
-        report['5. Open issues without correct estimation'] = self.without_correct_estimation()
-        report['6. Open code reviews with age more 2 days'] = self.not_implemented_yet()
-        report['7. Overload : '] = self.calc_overload()
-        report['8. Previous day work time logging'] = self.not_logged_work()
-        report['9. Not logged vacation'] = self.not_logged_vacation()
-        report['10. Tickets with wrong FixVersion'] = self.wrong_fix_version()
-        report['11. Wrong due date'] = self.wrong_due_date()
+        # report[
+        #     '1. Tickets with incorrect or empty due date (except ongoing activities)'] = self.issues_without_due_date()
+        # report['2. Tickets with expired due dates'] = self.issues_with_expired_due_date()
+        # report['3. Absence of "in progress" issues assigned to each team member report'] = self.absence_in_progress()
+        # report['4. Tickets "in progress" without updating during last 2 days'] = self.expired_in_progress()
+        # report['5. Open issues without correct estimation'] = self.without_correct_estimation()
+        report['6. Open code reviews with age more 2 days'] = self.expired_code_review()
+        # report['7. Overload : '] = self.calc_overload()
+        # report['8. Previous day work time logging'] = self.not_logged_work()
+        # report['9. Not logged vacation'] = self.not_logged_vacation()
+        # report['10. Tickets with wrong FixVersion'] = self.wrong_fix_version()
+        # report['11. Wrong due date'] = self.wrong_due_date()
         return report
 
 
@@ -274,6 +285,8 @@ def main():
                         help="Custom developers list")
     parser.add_argument("-V", "--verbose", action="store_true",
                         help="Print queries")
+    parser.add_argument("-s", "--sprint",
+                        help="Set sprint version")
     args = parser.parse_args()
     user = raw_input("Enter JIRA username : ")
     passwd = getpass.getpass()
@@ -283,7 +296,7 @@ def main():
     on_vacation = []
     if args.vacation:
         on_vacation = args.vacation
-    sdl = SDL(user, passwd, developers_on_vacation=on_vacation, developers=developers,
+    sdl = SDL(user, passwd, sprint=args.sprint, developers_on_vacation=on_vacation, developers=developers,
               print_queries=args.verbose)
     daily_report = sdl.daily_metrics()
     email_list = []
