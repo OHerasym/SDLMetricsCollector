@@ -1,4 +1,4 @@
-#! /usr/bin/env python2
+# ! /usr/bin/env python2
 from jira import JIRA
 from datetime import date, timedelta
 import dateutil.parser
@@ -17,8 +17,10 @@ import github
 
 server = "http://adc.luxoft.com/jira"
 current_sprint = "SDL_RB_B3.24"
-users = ["dtrunov ", "agaliuzov", "akutsan", "aoleynik", "anosach", "okrotenko", "vveremjova",
+users = ["dtrunov", "agaliuzov", "akutsan", "aoleynik", "anosach", "okrotenko", "vveremjova",
          "abyzhynar", "ezamakhov", "aleshin", "akirov", "vprodanov", "alambin"]
+
+user_to_github = {"akutsan": "LuxoftAKutsan"}
 
 message_template = '''From: Alexander Kutsan <AKutsan@luxoft.com>
 To: %s
@@ -173,8 +175,14 @@ class SDL():
         report = []
         gh = github.login()
         repo = gh.repository('CustomSDL', 'sdl_panasonic')
-        print(github.open_pull_request_for_repo(repo))
-
+        open_pulls = github.open_pull_request_for_repo(repo)
+        for pull in open_pulls :
+            days_old = pull["days_ago"]
+            if  days_old > 2:
+                developer = pull["user"]
+                caption = pull["caption"]
+                url = pull["url"]
+                report.append((user_to_github[developer], "has review %d days old: %s : %s"%(days_old, caption, url)))
         return report
 
     def wrong_due_date(self):
