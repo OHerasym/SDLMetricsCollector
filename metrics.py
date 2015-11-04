@@ -1,4 +1,4 @@
-# ! /usr/bin/env python2
+#! /usr/bin/env python2
 from jira import JIRA
 from datetime import date, timedelta
 import dateutil.parser
@@ -9,35 +9,12 @@ import argparse
 import re
 
 import github
+import config
 
 # TODO:
 # Open code reviews with age more 2 days
 #	Weekly metrics
 #	Monthly project metrics
-
-server = "http://adc.luxoft.com/jira"
-current_sprint = "SDL_RB_B3.24"
-users = ["dtrunov", "agaliuzov", "akutsan", "aoleynik", "anosach", "okrotenko", "vveremjova",
-         "abyzhynar", "ezamakhov", "aleshin", "akirov", "vprodanov", "alambin"]
-
-user_to_github = {"akutsan": "LuxoftAKutsan"}
-
-message_template = '''From: Alexander Kutsan <AKutsan@luxoft.com>
-To: %s
-Subject: Metric fails WARNING
-
-Hello,
-
-Metric fails collected by script:
-
-%s
-
-Script sources available on github
-https://github.com/LuxoftAKutsan/SDLMetricsCollector
-
-Best regards,
-Alexander Kutsan
-'''
 
 
 def is_holiday(day):
@@ -82,8 +59,8 @@ class SDL():
     issue_path = "https://adc.luxoft.com/jira/browse/%s"
 
     def __init__(self, user, passwd, sprint, developers_on_vacation=[],
-                 developers=users, print_queries=False):
-        self.jira = JIRA(server, basic_auth=(user, passwd))
+                 developers = config.developers, print_queries=False):
+        self.jira = JIRA(config.server, basic_auth=(user, passwd))
         self.on_vacation = developers_on_vacation
         self.developers = developers
         self.sdl = self.jira.project('APPLINK')
@@ -91,7 +68,7 @@ class SDL():
         self.print_queries = print_queries
         versions = self.jira.project_versions(self.sdl)
         for v in versions:
-            if v.name == current_sprint:
+            if v.name == self.sprint:
                 self.sprint = v
                 break
 
@@ -176,13 +153,9 @@ class SDL():
         gh = github.login()
         repo = gh.repository('CustomSDL', 'sdl_panasonic')
         open_pulls = github.open_pull_request_for_repo(repo)
-        for pull in open_pulls :
-            days_old = pull["days_ago"]
-            if  days_old > 2:
-                developer = pull["user"]
-                caption = pull["caption"]
-                url = pull["url"]
-                report.append((user_to_github[developer], "has review %d days old: %s : %s"%(days_old, caption, url)))
+        for pull in open_pulls:
+            if pull.days_old > 2:
+                report.append((config.github_luxoft_map[pull.developer], "has review %d days old: %s : %s"%(pull.days_old, pull.caption, pull.url)))
         return report
 
     def wrong_due_date(self):
@@ -298,7 +271,7 @@ def main():
     args = parser.parse_args()
     user = raw_input("Enter JIRA username : ")
     passwd = getpass.getpass()
-    developers = users
+    developers = config.developers
     if args.developers:
         developers = args.developers
     on_vacation = []

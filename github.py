@@ -42,6 +42,12 @@ def login():
     return github3.login(token=token)
 
 
+class PullRequest:
+    def __init__(self, developer, caption, url, days_old):
+        self.developer = developer
+        self.caption = caption
+        self.url = url
+        self.days_old = days_old
 
 def open_pull_request_for_repo(repo):
     res = []
@@ -49,5 +55,6 @@ def open_pull_request_for_repo(repo):
     open_pull_requests = list(repo.pull_requests(state='open'))
     for pull_request in open_pull_requests:
         delta = now.date() - pull_request.created_at.date()
-        res.append({"user" : pull_request.assignee, "caption" : pull_request.body_text, "url" :pull_request.html_url, "days_ago" : delta.days})
+        print(pull_request.assignee,  pull_request.body_text, pull_request.html_url, delta.days)
+        res.append(PullRequest(pull_request.user.plan.name,  pull_request.title, pull_request.html_url, delta.days))
     return res
