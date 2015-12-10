@@ -20,3 +20,9 @@ optional arguments:
                         Developer on vacation
   -d DEVELOPERS [DEVELOPERS ...], --developers DEVELOPERS [DEVELOPERS ...]
                         Custom developers list
+
+
+
+dependencies:
+https://github.com/requests/requests-oauthlib
+
