@@ -1,9 +1,10 @@
 #! /usr/bin/env python2
-from jira import JIRA
+import jira_auth
 from datetime import date, timedelta
 import dateutil.parser
 import time
 import getpass
+from getpass import getuser
 import smtplib
 import argparse
 import re
@@ -58,9 +59,9 @@ def to_h(val):
 class SDL():
     issue_path = "https://adc.luxoft.com/jira/browse/%s"
 
-    def __init__(self, user, passwd, sprint, developers_on_vacation=[],
+    def __init__(self, sprint, developers_on_vacation=[],
                  developers = config.developers, print_queries=False):
-        self.jira = JIRA(config.server, basic_auth=(user, passwd))
+        self.jira = jira_auth.login(config.server)
         self.on_vacation = developers_on_vacation
         self.developers = developers
         self.sdl = self.jira.project('APPLINK')
@@ -71,6 +72,7 @@ class SDL():
             if v.name == self.sprint:
                 self.sprint = v
                 break
+
 
     def Query(self, query):
         if (self.print_queries):
@@ -155,7 +157,9 @@ class SDL():
         open_pulls = github.open_pull_request_for_repo(repo)
         for pull in open_pulls:
             if pull.days_old > 2:
-                report.append((config.github_luxoft_map[pull.developer], "has review %d days old: %s : %s"%(pull.days_old, pull.caption, pull.url)))
+                developer = config.get_developer_by_github_user_name(pull.developer)
+                if developer in self.developers:
+                    report.append((developer, "has review %d days old: %s : %s"%(pull.days_old, pull.caption, pull.url)))
         return report
 
     def wrong_due_date(self):
@@ -218,41 +222,43 @@ class SDL():
         report = []
         user_logged = {}
         for developer in self.developers:
-            user_logged[developer] = 0
+            user_logged[str(developer)] = 0
         today = date.today()
         last_work = last_work_day()
-        query = '''key in workedIssues("%s","%s", "APPLINK Developers")''' % (last_work.strftime("%Y/%m/%d"),
-                                                                              today.strftime("%Y/%m/%d"))
+        query = '''key in workedIssues("%s","%s", "APPLINK Developers")''' % (last_work.strftime("%Y-%m-%d"),
+                                                                              today.strftime("%Y-%m-%d"))
+        print(query)
         issues = self.Query(query)
+        print(len(issues))
         for issue in issues:
             work_logs = self.jira.worklogs(issue.key)
             for work_log in work_logs:
                 date_started = dateutil.parser.parse(work_log.started).date()
+                print(issue.key, date_started, work_log.updateAuthor.name)
                 if date_started == last_work:
                     time_spent = work_log.timeSpent
                     author = work_log.updateAuthor.name
                     if author in self.developers:
                         user_logged[author] += time_spent_from_str(time_spent)
         for developer in user_logged:
-            if (user_logged[developer] < 8):
+            if (user_logged[str(developer)] < 8):
                 report.append(
-                    (developer, "Logged for %s : %sh" % (last_work.strftime("%Y/%m/%d"), user_logged[developer])))
+                    (developer, "Logged for %s : %sh" % (last_work.strftime("%Y/%m/%d"), user_logged[str(developer)])))
         return report
 
     def daily_metrics(self):
         report = {}
-        # report[
-        #     '1. Tickets with incorrect or empty due date (except ongoing activities)'] = self.issues_without_due_date()
-        # report['2. Tickets with expired due dates'] = self.issues_with_expired_due_date()
-        # report['3. Absence of "in progress" issues assigned to each team member report'] = self.absence_in_progress()
-        # report['4. Tickets "in progress" without updating during last 2 days'] = self.expired_in_progress()
-        # report['5. Open issues without correct estimation'] = self.without_correct_estimation()
+        report['1. Tickets with incorrect or empty due date (except ongoing activities)'] = self.issues_without_due_date()
+        report['2. Tickets with expired due dates'] = self.issues_with_expired_due_date()
+        report['3. Absence of "in progress" issues assigned to each team member report'] = self.absence_in_progress()
+        report['4. Tickets "in progress" without updating during last 2 days'] = self.expired_in_progress()
+        report['5. Open issues without correct estimation'] = self.without_correct_estimation()
         report['6. Open code reviews with age more 2 days'] = self.expired_code_review()
-        # report['7. Overload : '] = self.calc_overload()
-        # report['8. Previous day work time logging'] = self.not_logged_work()
-        # report['9. Not logged vacation'] = self.not_logged_vacation()
-        # report['10. Tickets with wrong FixVersion'] = self.wrong_fix_version()
-        # report['11. Wrong due date'] = self.wrong_due_date()
+        report['7. Overload : '] = self.calc_overload()
+        report['9. Not logged vacation'] = self.not_logged_vacation()
+        report['10. Tickets with wrong FixVersion'] = self.wrong_fix_version()
+        report['11. Wrong due date'] = self.wrong_due_date()
+        report['8. Previous day work time logging'] = self.not_logged_work()
         return report
 
 
@@ -269,15 +275,20 @@ def main():
     parser.add_argument("-s", "--sprint",
                         help="Set sprint version")
     args = parser.parse_args()
-    user = raw_input("Enter JIRA username : ")
-    passwd = getpass.getpass()
     developers = config.developers
     if args.developers:
-        developers = args.developers
+        developers = []
+        for arg_dev in args.developers:
+            developer = config.get_developer_by_luxoft_user_name(arg_dev)
+            if (developer):
+                developers.append(developer)
+            else:
+                print("{0} not found ", arg_dev)
+
     on_vacation = []
     if args.vacation:
         on_vacation = args.vacation
-    sdl = SDL(user, passwd, sprint=args.sprint, developers_on_vacation=on_vacation, developers=developers,
+    sdl = SDL(sprint=args.sprint, developers_on_vacation=on_vacation, developers=developers,
               print_queries=args.verbose)
     daily_report = sdl.daily_metrics()
     email_list = []
@@ -297,7 +308,7 @@ def main():
     print(report_str)
     if (args.send_mail):
         print(email_list)
-        sender = '%s@luxoft.com' % user
+        sender = '%s@luxoft.com' % getuser()
         smtpObj = smtplib.SMTP('puppy.luxoft.com')
         smtpObj.sendmail(sender, email_list, message_template % (";".join(email_list), report_str))
 

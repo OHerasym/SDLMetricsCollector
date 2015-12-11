@@ -1,7 +1,7 @@
 import github3
 import datetime
 import random, string
-from getpass import getuser, getpass
+from getpass import getpass
 
 CREDENTIALS_FILE = "/tmp/git_hub_login"
 
@@ -18,7 +18,7 @@ def get_token():
             fd.close()
             return token, id
     except(IOError):
-        return None
+        return None, None
 
 
 def login():
@@ -28,7 +28,7 @@ def login():
         password = ''
         while not password:
             password = getpass('Password for {0}: '.format(user))
-            note = "SDLMetricsCollector_hash" + randomword(10)
+            note = "SDLMetricsCollector_hash"
             note_url = "https://github.com/LuxoftAKutsan/SDLMetricsCollector"
             scopes = ['user', 'repo']
             auth = github3.authorize(user, password, scopes, note, note_url)
@@ -55,6 +55,5 @@ def open_pull_request_for_repo(repo):
     open_pull_requests = list(repo.pull_requests(state='open'))
     for pull_request in open_pull_requests:
         delta = now.date() - pull_request.created_at.date()
-        print(pull_request.assignee,  pull_request.body_text, pull_request.html_url, delta.days)
-        res.append(PullRequest(pull_request.user.plan.name,  pull_request.title, pull_request.html_url, delta.days))
+        res.append(PullRequest(pull_request.user.login,  pull_request.title, pull_request.html_url, delta.days))
     return res
