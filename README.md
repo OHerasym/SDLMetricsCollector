@@ -25,4 +25,6 @@ optional arguments:
 
 dependencies:
 https://github.com/requests/requests-oauthlib
+http://github3py.readthedocs.org/en/master/index.html#installation
+https://pypi.python.org/pypi/jira
 
