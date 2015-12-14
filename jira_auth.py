@@ -24,7 +24,8 @@ def manual_login(server):
         fd.close()
     except(jira.exceptions.JIRAError):
         print("Incorrect jira credantials")
-        manual_login(server)
+        return manual_login(server)
+    return access
 
 def login(server):
         user, password =  get_credantials()
@@ -35,5 +36,5 @@ def login(server):
             except:
                 print("Saved incorrect jira credantials")
         if not access:
-            manual_login(server)
+            access = manual_login(server)
         return access

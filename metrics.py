@@ -13,8 +13,8 @@ import github
 import config
 
 # TODO:
-# Open code reviews with age more 2 days
-#	Weekly metrics
+#   Calculate current sprint automatically
+#	Weekly project metrics
 #	Monthly project metrics
 
 
@@ -65,7 +65,7 @@ class SDL():
         self.on_vacation = developers_on_vacation
         self.developers = developers
         self.sdl = self.jira.project('APPLINK')
-        self.sprint = sprint
+        self.sprint = "SDL_RB_B3.26"
         self.print_queries = print_queries
         versions = self.jira.project_versions(self.sdl)
         for v in versions:
@@ -73,11 +73,10 @@ class SDL():
                 self.sprint = v
                 break
 
-
-    def Query(self, query):
+    def Query(self, query, maxResults=50):
         if (self.print_queries):
             print(query)
-        issues = self.jira.search_issues(query)
+        issues = self.jira.search_issues(query, maxResults=maxResults)
         return issues
 
     def workload(self, user, report=[]):
@@ -222,26 +221,30 @@ class SDL():
         report = []
         user_logged = {}
         for developer in self.developers:
-            user_logged[str(developer)] = 0
+            user_logged[developer.lower()] = 0
         today = date.today()
         last_work = last_work_day()
         query = '''key in workedIssues("%s","%s", "APPLINK Developers")''' % (last_work.strftime("%Y-%m-%d"),
                                                                               today.strftime("%Y-%m-%d"))
         print(query)
-        issues = self.Query(query)
+        issues = self.Query(query, maxResults=1000)
         print(len(issues))
         for issue in issues:
             work_logs = self.jira.worklogs(issue.key)
             for work_log in work_logs:
                 date_started = dateutil.parser.parse(work_log.started).date()
-                print(issue.key, date_started, work_log.updateAuthor.name)
+                print(issue.key, work_log.updateAuthor.name, date_started, last_work, date_started == last_work)
                 if date_started == last_work:
                     time_spent = work_log.timeSpent
                     author = work_log.updateAuthor.name
+                    print(author,issue.key, time_spent)
                     if author in self.developers:
+                        print(author, "appended")
                         user_logged[author] += time_spent_from_str(time_spent)
+                    else:
+                        print(author, "sciped")
         for developer in user_logged:
-            if (user_logged[str(developer)] < 8):
+            if (user_logged[developer.lower()] < 8):
                 report.append(
                     (developer, "Logged for %s : %sh" % (last_work.strftime("%Y/%m/%d"), user_logged[str(developer)])))
         return report
