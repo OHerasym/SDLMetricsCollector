@@ -226,23 +226,16 @@ class SDL():
         last_work = last_work_day()
         query = '''key in workedIssues("%s","%s", "APPLINK Developers")''' % (last_work.strftime("%Y-%m-%d"),
                                                                               today.strftime("%Y-%m-%d"))
-        print(query)
         issues = self.Query(query, maxResults=1000)
-        print(len(issues))
         for issue in issues:
             work_logs = self.jira.worklogs(issue.key)
             for work_log in work_logs:
                 date_started = dateutil.parser.parse(work_log.started).date()
-                print(issue.key, work_log.updateAuthor.name, date_started, last_work, date_started == last_work)
                 if date_started == last_work:
                     time_spent = work_log.timeSpent
                     author = work_log.updateAuthor.name
-                    print(author,issue.key, time_spent)
                     if author in self.developers:
-                        print(author, "appended")
                         user_logged[author] += time_spent_from_str(time_spent)
-                    else:
-                        print(author, "sciped")
         for developer in user_logged:
             if (user_logged[developer.lower()] < 8):
                 report.append(
