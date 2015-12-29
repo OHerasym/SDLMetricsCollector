@@ -131,7 +131,7 @@ class SDL():
     def expired_in_progress(self):
         report = []
         for user in self.developers:
-            query = ''' assignee = %s AND status = "In Progress" AND (updated < -2d OR fixVersion = Backlog)'''
+            query = '''assignee = %s AND status in ("In Progress", "Analyze") AND (updated < -2d OR fixVersion = Backlog)'''
             query = query % (user)
             issues = self.Query(query)
             for issue in issues:
