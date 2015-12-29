@@ -28,7 +28,7 @@ def login():
         password = ''
         while not password:
             password = getpass('Password for {0}: '.format(user))
-            note = "SDLMetricsCollector_hash"
+            note = "SDLMetricsCollector_hash" + randomword(10)
             note_url = "https://github.com/LuxoftAKutsan/SDLMetricsCollector"
             scopes = ['user', 'repo']
             auth = github3.authorize(user, password, scopes, note, note_url)
