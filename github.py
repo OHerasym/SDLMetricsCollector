@@ -52,7 +52,11 @@ class PullRequest:
 def open_pull_request_for_repo(repo):
     res = []
     now = datetime.datetime.now()
-    open_pull_requests = list(repo.pull_requests(state='open'))
+    print(repo)
+    try:
+        open_pull_requests = list(repo.pull_requests(state='open'))
+    except AttributeError:
+	return  res
     for pull_request in open_pull_requests:
         delta = now.date() - pull_request.created_at.date()
         res.append(PullRequest(pull_request.user.login,  pull_request.title, pull_request.html_url, delta.days))
