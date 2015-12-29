@@ -304,7 +304,7 @@ def main():
     print(report_str)
     if (args.send_mail):
         print(email_list)
-        sender = '%s@luxoft.com' % getuser()
+        sender = "mailer@zln-ford-01.luxoft.com"
         smtpObj = smtplib.SMTP('localhost')
         smtpObj.sendmail(sender, email_list, config.message_template % (";".join(email_list), report_str))
 
