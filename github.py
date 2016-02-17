@@ -52,9 +52,10 @@ class PullRequest:
 def open_pull_request_for_repo(repo):
     res = []
     now = datetime.datetime.now()
+    print(now)
     print(repo)
     try:
-        open_pull_requests = list(repo.pull_requests(state='open'))
+        open_pull_requests = list(repo.iter_pulls(state='open'))
     except AttributeError:
 	return  res
     for pull_request in open_pull_requests:

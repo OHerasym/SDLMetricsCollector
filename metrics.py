@@ -65,7 +65,7 @@ class SDL():
         self.on_vacation = developers_on_vacation
         self.developers = developers
         self.sdl = self.jira.project('APPLINK')
-        self.sprint = "SDL_RB_B3.26"
+        self.sprint = "SDL_RB_B3.28"
         self.print_queries = print_queries
         versions = self.jira.project_versions(self.sdl)
         for v in versions:
