@@ -35,11 +35,12 @@ developers.append(Developer("VVeremjova", "VVeremjova"))
 developers.append(Developer("ANosach", "anosach-luxoft"))
 developers.append(Developer("AByzhynar", "AByzhynar"))
 developers.append(Developer("AHrytsevich", "AGritsevich"))
-developers.append(Developer("AMikhniev", "AMikhniev"))
+developers.append(Developer("SLevchenko", "LevchenkoS"))
 developers.append(Developer("AKozoriz", "Kozoriz"))
 developers.append(Developer("RMalynovskyi", "malirod"))
 developers.append(Developer("OHerasym", "OHerasym"))
-developers.append(Developer("AKirov", "asenkk"))
+developers.append(Developer("OKozlov", "okozlovlux"))
+developers.append(Developer("VlAntonov", "vlantonov"))
 
 def get_developer_by_github_user_name(guthub_username):
     for developer in developers:
