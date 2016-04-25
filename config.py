@@ -40,8 +40,7 @@ developers.append(Developer("AKozoriz", "Kozoriz"))
 developers.append(Developer("RMalynovskyi", "malirod"))
 developers.append(Developer("OHerasym", "OHerasym"))
 developers.append(Developer("OKozlov", "okozlovlux"))
-developers.append(Developer("VlAntonov ", "vlantonov "))
-
+developers.append(Developer("VlAntonov", "vlantonov"))
 
 def get_developer_by_github_user_name(guthub_username):
     for developer in developers:
