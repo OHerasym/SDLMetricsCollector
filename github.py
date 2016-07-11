@@ -3,7 +3,7 @@ import datetime
 import random, string
 from getpass import getpass
 
-CREDENTIALS_FILE = "/tmp/.github_credantials"
+CREDENTIALS_FILE = "github_credantials"
 
 
 def randomword(length):

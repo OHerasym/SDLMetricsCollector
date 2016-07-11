@@ -24,13 +24,12 @@ class Developer:
 developers = []
 
 developers.append(Developer("AKutsan", "LuxoftAKutsan"))
-developers.append(Developer("AOlyenik", "dev-gh"))
+developers.append(Developer("AOleynik", "dev-gh"))
 developers.append(Developer("VProdanov", "vprodanov"))
 developers.append(Developer("ALeshin", "Anatoliy-Leshin"))
 developers.append(Developer("DTrunov", "dtrunov"))
 developers.append(Developer("OKrotenko", "nk0leg"))
 developers.append(Developer("EZamakhov", "pestOO"))
-developers.append(Developer("AOlyenik", "dev-gh"))
 developers.append(Developer("VVeremjova", "VVeremjova"))
 developers.append(Developer("ANosach", "anosach-luxoft"))
 developers.append(Developer("AByzhynar", "AByzhynar"))

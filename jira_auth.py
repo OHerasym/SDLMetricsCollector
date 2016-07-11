@@ -1,7 +1,7 @@
 import jira
 from getpass import getpass
 
-CREDENTIALS_FILE = "/tmp/.jira_credantials"
+CREDENTIALS_FILE = "jira_credantials"
 def get_credantials():
     try:
         with open(CREDENTIALS_FILE, 'r') as fd:

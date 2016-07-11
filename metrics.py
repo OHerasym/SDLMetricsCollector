@@ -8,6 +8,7 @@ from getpass import getuser
 import smtplib
 import argparse
 import re
+import sys
 
 import github
 import config
@@ -89,6 +90,32 @@ class SDL():
                 res += to_h(issue.fields.timeestimate)
                 report.append((issue, to_h(issue.fields.timeestimate)))
         return res
+
+    def closed_tasks(self):
+        report= []
+	count = 0
+        #query = 'status = Closed AND assignee in ("%s")'
+        #query = query % (user)
+	sys.stdout.write('Collecting data: ')
+  	sys.stdout.flush()
+        for user in self.developers:
+ 	    query = 'status in (Closed, Resolved) AND (resolved >= -12w OR "Closed Date" >= -12w) AND assignee in ("%s")'
+            #query = 'status in (Closed, Resolved) AND assignee in ("%s")'
+            query = query % user
+            issues = self.Query(query, 600)
+	    sys.stdout.write('#')
+	    sys.stdout.flush()
+            for issue in issues:
+                 #report.append((user, self.issue_path % issue))
+                 count = count + 1
+            report.append((user, count))
+            count = 0
+        #print(user)
+        #print(issues.size())
+	print
+        return report
+            
+        
 
     def calc_overload(self):
         report = []
@@ -244,17 +271,18 @@ class SDL():
 
     def daily_metrics(self):
         report = {}
-        report['1. Tickets with incorrect or empty due date (except ongoing activities)'] = self.issues_without_due_date()
-        report['2. Tickets with expired due dates'] = self.issues_with_expired_due_date()
-        report['3. Absence of "in progress" issues assigned to each team member report'] = self.absence_in_progress()
-        report['4. Tickets "in progress" without updating during last 2 days'] = self.expired_in_progress()
-        report['5. Open issues without correct estimation'] = self.without_correct_estimation()
-        report['6. Open code reviews with age more 2 days'] = self.expired_code_review()
-        report['7. Overload : '] = self.calc_overload()
-        report['9. Not logged vacation'] = self.not_logged_vacation()
-        report['10. Tickets with wrong FixVersion'] = self.wrong_fix_version()
-        report['11. Wrong due date'] = self.wrong_due_date()
-        report['8. Previous day work time logging'] = self.not_logged_work()
+       # report['1. Tickets with incorrect or empty due date (except ongoing activities)'] = self.issues_without_due_date()
+        #report['2. Tickets with expired due dates'] = self.issues_with_expired_due_date()
+        #report['3. Absence of "in progress" issues assigned to each team member report'] = self.absence_in_progress()
+        #report['4. Tickets "in progress" without updating during last 2 days'] = self.expired_in_progress()
+        #report['5. Open issues without correct estimation'] = self.without_correct_estimation()
+        #report['6. Open code reviews with age more 2 days'] = self.expired_code_review()
+        #report['7. Overload : '] = self.calc_overload()
+        #report['9. Not logged vacation'] = self.not_logged_vacation()
+        #report['10. Tickets with wrong FixVersion'] = self.wrong_fix_version()
+        #report['11. Wrong due date'] = self.wrong_due_date()
+        #report['8. Previous day work time logging'] = self.not_logged_work()
+        report['qweqweqwe'] = self.closed_tasks()
         return report
 
 
@@ -297,16 +325,16 @@ def main():
         for fail in fails:
             temp = "\t%s : %s \n" % (fail[0], fail[1])
             report_str += temp
-            if fail[0]:
-                email = email_template % (fail[0])
-                if email not in email_list:
-                    email_list.append(email)
+            #if fail[0]:
+             #   email = email_template % (fail[0])
+              #  if email not in email_list:
+               #     email_list.append(email)
     print(report_str)
-    if (args.send_mail):
-        print(email_list)
-        sender = "mailer@zln-ford-01.luxoft.com"
-        smtpObj = smtplib.SMTP('localhost')
-        smtpObj.sendmail(sender, email_list, config.message_template % (";".join(email_list), report_str))
+    #if (args.send_mail):
+     #   print(email_list)
+      #  sender = "mailer@zln-ford-01.luxoft.com"
+       # smtpObj = smtplib.SMTP('localhost')
+        #smtpObj.sendmail(sender, email_list, config.message_template % (";".join(email_list), report_str))
 
     return 0
 
