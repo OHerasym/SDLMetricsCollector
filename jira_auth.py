@@ -1,27 +1,26 @@
 import jira
 from getpass import getpass
+import base64
 
-CREDENTIALS_FILE = "/tmp/.jira_credantials"
+CREDENTIALS_FILE = "jira_credantials"
 def get_credantials():
     try:
         with open(CREDENTIALS_FILE, 'r') as fd:
-            login = fd.readline().strip()  # Can't hurt to be paranoid
-            passwd = fd.readline().strip()
-            fd.close()
+            login = base64.b64decode(fd.readline().strip())
+            passwd = base64.b64decode(fd.readline().strip())
             return login, passwd
     except(IOError):
         return None, None
 
 
 def manual_login(server):
-    user = user = raw_input("Jira login: ")
+    user = raw_input("Jira login: ")
     password = getpass('Password for {0}: '.format(user))
     try:
         access = jira.JIRA(server, basic_auth=(user, password))
-        fd = open(CREDENTIALS_FILE, 'w')
-        fd.write(user + '\n')
-        fd.write(password)
-        fd.close()
+        with open(CREDENTIALS_FILE, 'w') as credentials:
+            credentials.write(base64.b64encode(user) + '\n')
+            credentials.write(base64.b64encode((password)))
     except(jira.exceptions.JIRAError):
         print("Incorrect jira credantials")
         return manual_login(server)

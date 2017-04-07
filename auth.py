@@ -1,10 +1,47 @@
+import jira
+from getpass import getpass
+import base64
 import github3
 import datetime
 import random, string
-from getpass import getpass
 
-CREDENTIALS_FILE = "github_credantials"
+JIRA_FILE = "jira_credantials"
+GITHUB_FILE = "github_credantials"
 
+def get_credantials():
+    try:
+        with open(JIRA_FILE, 'r') as fd:
+            login = base64.b64decode(fd.readline().strip())
+            passwd = base64.b64decode(fd.readline().strip())
+            return login, passwd
+    except(IOError):
+        return None, None
+
+
+def manual_login(server):
+    user = raw_input("Jira login: ")
+    password = getpass('Password for {0}: '.format(user))
+    try:
+        access = jira.JIRA(server, basic_auth=(user, password))
+        with open(JIRA_FILE, 'w') as credentials:
+            credentials.write(base64.b64encode(user) + '\n')
+            credentials.write(base64.b64encode((password)))
+    except(jira.exceptions.JIRAError):
+        print("Incorrect jira credantials")
+        return manual_login(server)
+    return access
+
+def jira_login(server):
+        user, password =  get_credantials()
+        access = None
+        if user and password:
+            try:
+                access = jira.JIRA(server, basic_auth=(user, password))
+            except:
+                print("Saved incorrect jira credantials")
+        if not access:
+            access = manual_login(server)
+        return access
 
 def randomword(length):
     return ''.join(random.choice(string.lowercase) for i in range(length))
@@ -12,10 +49,9 @@ def randomword(length):
 
 def get_token():
     try:
-        with open(CREDENTIALS_FILE, 'r') as fd:
+        with open(GITHUB_FILE, 'r') as fd:
             token = fd.readline().strip()
             id = fd.readline().strip()
-            # fd.close()
             return token, id
     except(IOError):
         return None, None
@@ -31,12 +67,11 @@ def login():
             note_url = "https://github.com/LuxoftAKutsan/SDLMetricsCollector"
             scopes = ['user', 'repo']
             auth = github3.authorize(user, password, scopes, note, note_url)
-        with open(CREDENTIALS_FILE, 'w') as fd:
+        with open(GITHUB_FILE, 'w') as fd:
             print("token %s" %auth.token)
             print("id %s" %auth.id)
             fd.write(str(auth.token) + '\n')
             fd.write(str(auth.id))
-            # fd.close()
             return login()
     return github3.login(token=token)
 
