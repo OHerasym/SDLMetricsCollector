@@ -395,6 +395,7 @@ def rara(metrics):
     set_1_metric(metrics['1. Tickets with incorrect or empty due date (except ongoing activities)'], developers, s, rb)
 
     s.write(5,5,'A1123123123')
+    s.write(6,6, '=SUM(1, 2, 3)')
     wb.save('names.xls')
 
 def main():
